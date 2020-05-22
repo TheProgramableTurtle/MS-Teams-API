@@ -6,3 +6,4 @@ A C# library to interface with Microsoft Teams using Selenium Webdriver.
 Selenium.Webdriver  
 DotNetSeleniumExtras.WaitHelpers  
 Selenium.Support  
+chromedriver  
