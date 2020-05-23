@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
@@ -18,8 +19,13 @@ namespace MS_Teams_API
         private string password;
         private IList<IWebElement> teamNameElements;
         private string[] teamNames;
+        private IList<IWebElement> channelNameElements;
+        private string[] channelNames;
         private string command;
+        private string[] localArgs;
         private bool running;
+        private int selectedTeam;
+        private int selectedChannel;
         public Core(string[] args)
         {
             Console.WriteLine("Creating Teams API WebDriver Core");
@@ -32,6 +38,8 @@ namespace MS_Teams_API
             this.password = "";
             this.command = "";
             this.running = true;
+            this.selectedTeam = 0;
+            this.selectedChannel = 0;
             this.HandleArgs(args);
             this.StartDriver();
             Console.WriteLine("Created WebDriver Core");
@@ -171,7 +179,8 @@ namespace MS_Teams_API
             {
                 Console.WriteLine();
                 Console.Write("~$ ");
-                this.command = Console.ReadLine();
+                this.localArgs= Console.ReadLine().Split(" ");
+                this.command = localArgs[0];
                 switch (this.command)
                 {
                     case ("Help"):
@@ -190,6 +199,53 @@ namespace MS_Teams_API
                         this.DisplayTeamNames();
                         break;
 
+                    case ("SelectTeam"):
+                        this.SelectTeam(Int32.Parse(this.localArgs[1]));
+                        break;
+
+                    case ("OpenSelectedTeam"):
+                        this.OpenSelectedTeam();
+                        break;
+
+                    case ("GetChannelNames"):
+                        this.GetChannelNames();
+                        break;
+
+                    case ("DisplayChannelNames"):
+                        this.DisplayChannelNames();
+                        break;
+
+                    case ("SelectChannel"):
+                        this.SelectChannel(Int32.Parse(this.localArgs[1]));
+                        break;
+
+                    case ("OpenSelectedChannel"):
+                        this.OpenSelectedChannel();
+                        break;
+
+                    case ("SendMessage"):
+                        string message = "";
+
+                        for (int i = 1; i < localArgs.Count(); i++)
+                        {
+                            message += localArgs[i];
+                            message += " ";
+                        }
+                        Console.WriteLine(message);
+                        this.SendMessage(message);
+                        break;
+
+                    case ("SendEmoji"):
+                        string emoji = "";
+
+                        for (int i = 1; i < localArgs.Count(); i++)
+                        {
+                            emoji += localArgs[i];
+                            emoji += " ";
+                        }
+                        Console.WriteLine(emoji);
+                        this.SendEmoji(emoji);
+                        break;
                     case ("Quit"):
                         this.running = false;
                         break;
@@ -260,7 +316,72 @@ namespace MS_Teams_API
 
             return 0;
         }
-      
+        public int SelectTeam(int team)
+        {
+            this.selectedTeam = team;
+            return 0;
+        }
+        public int OpenSelectedTeam()
+        {
+            this.driver.Navigate().GoToUrl("https://teams.microsoft.com/_#/school//?ctx=teamsGrid");
+            this.wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.ClassName("team-name-text")));
+            this.driver.FindElement(By.CssSelector("[data-tid='team-" + this.teamNames[this.selectedTeam] + "'")).Click();
+            return 0;
+        }
+        public int GetChannelNames()
+        {
+            this.OpenSelectedTeam();
+            this.channelNameElements = driver.FindElements(By.ClassName("name-channel-type"));
+
+            this.channelNames = new String[channelNameElements.Count];
+
+            int i = 0;
+            foreach (IWebElement element in channelNameElements)
+            {
+                channelNames[i++] = element.Text;
+            }
+
+            return 0;
+        }
+        public int DisplayChannelNames()
+        {
+            int i = 0;
+            foreach (string channelName in this.channelNames)
+            {
+                Console.WriteLine(i.ToString() + " - " + channelName);
+                i++;
+            }
+
+            return 0;
+        }
+        public int SelectChannel(int channel)
+        {
+            this.selectedChannel = channel;
+            return 0;
+        }
+        public int OpenSelectedChannel()
+        {
+            this.OpenSelectedTeam();
+            this.wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.ClassName("name-channel-type")));
+            this.driver.FindElement(By.CssSelector("[data-tid='team-" + this.teamNames[this.selectedTeam] + "-channel-" + this.channelNames[this.selectedChannel] + "'")).Click();
+            return 0;
+        }
+        public int SendMessage(string message)
+        {
+            this.OpenSelectedTeam();
+            this.OpenSelectedChannel();
+            this.wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.CssSelector("[data-tid='ckeditor-newConversation']")));
+            this.driver.FindElement(By.CssSelector("[data-tid='ckeditor-newConversation']")).SendKeys(message + Keys.Enter);
+            return 0;
+        }
+        public int SendEmoji(string message)
+        {
+            this.OpenSelectedTeam();
+            this.OpenSelectedChannel();
+            this.wait.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.CssSelector("[data-tid='ckeditor-newConversation']")));
+            this.driver.FindElement(By.CssSelector("[data-tid='ckeditor-newConversation']")).SendKeys(message + Keys.Enter + Keys.Enter);
+            return 0;
+        }
     }
 
 }
